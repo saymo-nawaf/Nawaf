@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>نظام حجز موعد - استراحة أبو حاشد</title>
+    <!-- الروابط الأساسية والمكتبات المدعومة -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #ff2a5f; 
+            --primary-gradient: linear-gradient(135deg, #ff2a5f 0%, #b3003b 100%);
+            --accent: #ff9f43; 
+            --accent-gradient: linear-gradient(135deg, #ff9f43 0%, #ff6b6b 100%);
+            --bg: #0f0c1b; 
+            --bg-gradient: radial-gradient(circle at top right, #251225 0%, #0f0c1b 100%);
+            --secondary: #00b894;
+            --danger: #ff4757;
+            --warning: #f1c40f;
+            --chat-bg: rgba(255, 255, 255, 0.04);
+            --text-color: #ffffff;
+            --nav-bg: rgba(23, 18, 41, 0.85);
+            --card-bg: rgba(255, 255, 255, 0.06);
+            --main-text: #f1f2f6;
+            --input-border: rgba(255, 255, 255, 0.12);
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-md: 0 12px 40px -5px rgba(0, 0, 0, 0.5);
+            --transition-smooth: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        .dark-theme {
+            --bg: #0a0512;
+            --bg-gradient: linear-gradient(180deg, #0a0512 0%, #020105 100%);
+            --card-bg: rgba(15, 10, 25, 0.7);
+            --main-text: #a4b0be;
+            --chat-bg: #05020a;
+            --input-border: rgba(255, 255, 255, 0.05);
+        }
+        
+        .internal-theme {
+            --primary: #0984e3; 
+            --primary-gradient: linear-gradient(135deg, #0984e3 0%, #2f3542 100%);
+            --accent: #00b894;  
+            --bg-gradient: radial-gradient(circle at top left, #1e272e 0%, #0f141c 100%);      
+            --text-color: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            margin: 0;
+            padding: 10px 10px 120px 10px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            transition: var(--transition-smooth);
+            color: var(--main-text);
+            overflow-x: hidden;
+            padding-top: env(safe-area-inset-top, 20px);
+        }
+
+        /* --- شاشة البداية المتحركة (Splash Screen) --- */
+        #splash-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #2e081b 0%, #050207 100%);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 999999; transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), filter 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #splash-screen.fade-out {
+            opacity: 0; filter: blur(30px); pointer-events: none;
+        }
+        .splash-logo {
+            font-size: 95px; color: #fff; margin-bottom: 25px;
+            background: linear-gradient(135deg, #ff2a5f, #ff9f43);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: pulse-glow 2.5s infinite ease-in-out, bounceIn 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .splash-title {
+            font-size: 32px; color: #ffffff; font-weight: 900; margin-bottom: 12px; opacity: 0;
+            animation: fadeInUp 0.8s forwards 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            text-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .splash-subtitle {
+            font-size: 15px; color: rgba(255,255,255,0.5); opacity: 0;
+            animation: fadeInUp 0.8s forwards 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .splash-loader {
+            margin-top: 50px; width: 200px; height: 4px; background: rgba(255,255,255,0.06);
+            border-radius: 10px; overflow: hidden; position: relative;
+        }
+        .splash-loader-bar {
+            position: absolute; left: 0; top: 0; height: 100%; width: 0;
+            background: var(--accent-gradient);
+            box-shadow: 0 0 15px var(--accent);
+            animation: fill-loader 2.4s forwards cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(255,42,95,0.4)); }
+            50% { transform: scale(1.08); filter: drop-shadow(0 0 40px rgba(255,159,67,0.7)); }
+        }
+        @keyframes bounceIn {
+            0% { opacity: 0; transform: scale(0.3); }
+            50% { opacity: 0.9; transform: scale(1.05); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(25px); filter: blur(5px); }
+            to { opacity: 1; transform: translateY(0); filter: blur(0); }
+        }
+        @keyframes fill-loader {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+        
+        .network-alert {
+            position: fixed;
+            top: calc(15px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
+            background: var(--danger); color: white;
+            padding: 14px 28px; border-radius: var(--radius-md);
+            font-weight: 600; z-index: 99999; display: none;
+            box-shadow: var(--shadow-md); font-size: 14px;
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        /* --- حاويات النوافذ والتصميم العصري (Container & Cards) --- */
+        .container {
+            background: var(--card-bg);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            padding: 28px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            width: 100%;
+            max-width: 580px;
+            text-align: center;
+            margin-top: 15px;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            animation: fadeInContainer 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        @keyframes fadeInContainer {
+            from { opacity: 0; transform: translateY(40px); filter: blur(10px); }
+            to { opacity: 1; transform: translateY(0); filter: blur(0); }
+        }
+
+        h2 { 
+            color: #ffffff; 
+            margin-bottom: 25px; 
+            font-size: 26px; 
+            font-weight: 800;
+            background: linear-gradient(120deg, #ffffff, rgba(255,255,255,0.7));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        h3 { color: #ffffff; border-bottom: 1px solid var(--input-border); padding-bottom: 14px; text-align: right; font-size: 19px; font-weight: 700; margin-top: 5px;}
+        
+        /* --- الحقول المتفاعلة بنعومة (Micro-interactions for Inputs) --- */
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 14px 18px;
+            margin: 8px 0;
+            border: 1px solid var(--input-border);
+            border-radius: var(--radius-md);
+            font-size: 16px; /* يمنع الـ Auto-zoom في هواتف الآيفون */
+            font-family: inherit;
+            background: rgba(0, 0, 0, 0.2);
+            color: #ffffff;
+            transition: var(--transition-smooth);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { 
+            border-color: var(--accent); 
+            outline: none; 
+            box-shadow: 0 0 0 4px rgba(255, 159, 67, 0.25);
+            background: rgba(0, 0, 0, 0.35);
+            transform: translateY(-2px);
+        }
+        
+        /* --- أزرار حركية فائقة الاستجابة --- */
+        button {
+            background: var(--primary-gradient);
+            color: white; border: none;
+            padding: 16px 28px; border-radius: var(--radius-md);
+            cursor: pointer; font-size: 16px; width: 100%;
+            margin-top: 14px; font-weight: 700;
+            transition: var(--transition-smooth);
+            box-shadow: 0 6px 20px rgba(255, 42, 95, 0.3);
+            display: flex; justify-content: center; align-items: center; gap: 10px;
+            position: relative; overflow: hidden;
+        }
+        button:hover { 
+            filter: brightness(1.15); 
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 42, 95, 0.45);
+        }
+        button:active { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255, 42, 95, 0.3); }
+        button:disabled { background: #334155 !important; color: #64748b !important; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+        
+        .btn-success { background: linear-gradient(135deg, #00b894 0%, #00a8ff 100%); box-shadow: 0 6px 20px rgba(0, 184, 148, 0.3); }
+        .btn-success:hover { box-shadow: 0 8px 25px rgba(0, 184, 148, 0.45); }
+        .btn-danger { background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%); box-shadow: 0 6px 20px rgba(255, 71, 87, 0.3); }
+        .btn-danger:hover { box-shadow: 0 8px 25px rgba(255, 71, 87, 0.45); }
+        .btn-warning { background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); color: #0f172a; box-shadow: 0 6px 20px rgba(241, 196, 15, 0.3); }
+        .btn-warning:hover { box-shadow: 0 8px 25px rgba(241, 196, 15, 0.45); }
+        
+        .btn-small { padding: 8px 16px; font-size: 13px; width: auto; margin: 4px; border-radius: 10px; }
+        .btn-link { background: none; color: rgba(255,255,255,0.6); border: none; width: auto; margin-top: 18px; text-decoration: none; font-size: 14px; box-shadow: none; font-weight: 500;}
+        .btn-link:hover { color: #ffffff; text-decoration: none; transform: translateY(-1px); box-shadow: none; }
+        .hidden { display: none !important; }
+        
+        .datetime-box {
+            background: var(--chat-bg);
+            padding: 14px 18px;
+            border-radius: var(--radius-md);
+            margin-bottom: 25px;
+            font-weight: 600;
+            color: #ffffff;
+            display: flex; justify-content: space-between; font-size: 14px;
+            border: 1px solid var(--input-border);
+        }
+
+        .form-group { text-align: right; margin-bottom: 20px; position: relative; width: 100%;}
+        .form-group label { font-weight: 600; font-size: 14px; color: #ffffff; opacity: 0.9; display: block; margin-bottom: 8px; padding-right: 4px; }
+        
+        .password-toggle {
+            position: absolute; left: 16px; top: 46px;
+            cursor: pointer; color: rgba(255,255,255,0.4); z-index: 10;
+            transition: var(--transition-smooth); font-size: 18px;
+        }
+        .password-toggle:hover { color: #ffffff; }
+
+        .price-badge {
+            background: rgba(0, 184, 148, 0.15); color: #00b894;
+            padding: 12px 18px; border-radius: var(--radius-md);
+            font-weight: 800; display: inline-block; font-size: 15px;
+            border: 1px solid rgba(0, 184, 148, 0.3); transition: var(--transition-smooth);
+        }
+        .price-badge:hover { transform: scale(1.04); background: rgba(0, 184, 148, 0.25); }
+
+        .counter-badge {
+            background: rgba(255, 159, 67, 0.15); color: #ff9f43;
+            padding: 12px 18px; border-radius: var(--radius-md);
+            font-weight: 700; display: inline-block;
+            border: 1px solid rgba(255, 159, 67, 0.3); font-size: 14px;
+        }
+
+        .pinned-chat-msg {
+            background: rgba(0, 184, 148, 0.1); border-right: 5px solid var(--secondary);
+            color: #ffffff; padding: 15px; border-radius: var(--radius-md);
+            margin-bottom: 20px; font-size: 14px; font-weight: 600; text-align: right;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .admin-section-box {
+            background: rgba(0,0,0,0.15); border: 1px solid var(--input-border);
+            border-radius: var(--radius-lg); padding: 22px; margin-bottom: 20px;
+            box-shadow: var(--shadow-sm); text-align: right;
+        }
+
+        .announcement-banner {
+            background: rgba(241, 196, 15, 0.12); border: 1px solid rgba(241, 196, 15, 0.25);
+            color: #ffffff; padding: 16px; border-radius: var(--radius-md);
+            font-weight: 600; margin-bottom: 20px; text-align: right; font-size: 14px;
+            box-shadow: var(--shadow-sm); line-height: 1.5;
+        }
+
+        /* --- شريط التنقل السفلي المتطور والناعم --- */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: var(--nav-bg); backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            box-shadow: 0 -10px 35px rgba(0,0,0,0.4);
+            display: flex; justify-content: space-around; padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 12px)) 0;
+            z-index: 999; border-top: 1px solid rgba(255, 255, 255, 0.06);
+            transition: var(--transition-smooth);
+        }
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center;
+            color: rgba(255,255,255,0.4); font-size: 12px; font-weight: 700;
+            cursor: pointer; text-decoration: none; position: relative;
+            transition: var(--transition-smooth); padding: 6px 14px; border-radius: 14px;
+        }
+        .nav-item i { font-size: 22px; margin-bottom: 6px; transition: var(--transition-smooth); }
+        .nav-item:hover { color: var(--accent); }
+        .nav-item.active { color: #ffffff; background: rgba(255, 255, 255, 0.08); transform: translateY(-4px); }
+        .nav-item.active i { background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .badge-count {
+            position: absolute; top: 2px; right: 8px;
+            background: var(--danger); color: white; font-size: 10px;
+            padding: 2px 7px; border-radius: 20px; font-weight: 800; display: none;
+            box-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
+        }
+
+        /* --- تصميم تذكرة الحجز الفاخرة --- */
+        .resort-card { max-width: 400px !important; margin: 15px auto;
+            background: #ffffff; border-radius: var(--radius-lg); overflow: hidden;
+            box-shadow: var(--shadow-md); margin-top: 20px; text-align: right;
+            position: relative; max-width: 100%; margin-left: auto; margin-right: auto;
+            border: 1px solid rgba(255,255,255,0.1); transform: scale(1); transition: var(--transition-smooth);
+        }
+        .resort-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+        .print-wrapper-box { background: #ffffff; padding: 0 0 15px 0; position: relative; }
+        
+        .resort-header { 
+            background: var(--primary-gradient); color: white; padding: 20px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            font-weight: 800; font-size: 16px; position: relative; z-index: 2;
+        }
+        .resort-header .badge-confirmed {
+            background: rgba(255, 255, 255, 0.25); color: #ffffff; padding: 6px 14px;
+            border-radius: 8px; font-size: 12px; border: 1px solid rgba(255,255,255,0.4);
+            backdrop-filter: blur(5px);
+        }
+
+        .resort-body { padding: 14px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; background: #ffffff; }
+        .ticket-field { text-align: right; }
+        .ticket-label { color: #8e9bb0; font-size: 11px; margin: 0 0 2px 0; font-weight: 700; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+        .ticket-value { color: #1e272e; font-size: 14px; font-weight: 700; margin: 0; }
+        .ticket-value.highlight-cyan { color: #0984e3; font-size: 15px; font-weight: 800; }
+        .ticket-value.highlight-price { color: #ff6b6b; font-size: 16px; font-weight: 800; }
+
+        .location-section { grid-column: span 2; border-top: 1px dashed #dcdde1; padding-top: 8px; }
+
+        .ticket-status-stamp-box {
+            grid-column: span 2; display: flex; justify-content: space-between;
+            align-items: center; border-top: 1px dashed #dcdde1; padding-top: 16px; margin-top: 6px;
+        }
+        .ticket-stamp {
+            border: 2.5px dashed var(--secondary); color: var(--secondary);
+            padding: 6px 18px; font-size: 14px; font-weight: 800;
+            border-radius: 10px; transform: rotate(-5deg); display: inline-block;
+            box-shadow: 0 0 10px rgba(0, 184, 148, 0.1);
+        }
+
+        .dashed-divider-bottom-container { position: relative; height: 20px; background: #ffffff; display: flex; align-items: center; z-index: 5; }
+        .dashed-line { width: 100%; border-top: 2.5px dashed #dcdde1; }
+        .side-cutout { position: absolute; width: 18px; height: 18px; background: #0c0917; border-radius: 50%; transition: var(--transition-smooth); }
+        .body.dark-theme .side-cutout { background: #0a0512; }
+        .side-cutout.left { left: -9px; }
+        .side-cutout.right { right: -9px; }
+        
+        .resort-footer { padding: 6px 12px; text-align: center; background: #ffffff; }
+        .resort-footer svg { display: block; margin: 0 auto; max-height: 40px; width: 80%; }
+        
+        .chat-area-container { display: flex; flex-direction: column; background: var(--chat-bg); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--input-border); padding: 20px; text-align: right; }
+        .ticket-list-container { max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
+        .support-ticket-item { background: rgba(255,255,255,0.03); border-right: 5px solid var(--primary); padding: 16px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); border-top: 1px solid var(--input-border); border-left: 1px solid var(--input-border); border-bottom: 1px solid var(--input-border); transition: var(--transition-smooth); }
+        .support-ticket-item:hover { transform: translateX(-4px); background: rgba(255,255,255,0.06); }
+        .support-ticket-item.resolved { border-right-color: var(--secondary); }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 25px; }
+        .stat-card { padding: 20px; border-radius: var(--radius-md); color: white; text-align: center; font-weight: 700; box-shadow: var(--shadow-sm); border: 1px solid rgba(255,255,255,0.05);}
+        .stat-blue { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); }
+        .stat-green { background: linear-gradient(135deg, #00b894 0%, #05c46b 100%); }
+        .stat-card h4 { margin: 0 0 10px 0; font-size: 15px; opacity: 0.8; }
+        .stat-card span { font-size: 26px; font-weight: 800; display: block; margin-bottom: 4px; }
+        
+        .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; background: rgba(0,0,0,0.2); margin-top: 15px; border-radius: var(--radius-md); overflow: hidden; }
+        .admin-table th, .admin-table td { border: 1px solid var(--input-border); padding: 14px 10px; text-align: center; color: #ffffff; }
+        .admin-table th { background: var(--primary-gradient); color: white; font-weight: 700; }
+        
+        .search-box {
+            width: 100%; padding: 14px; margin-bottom: 20px;
+            border: 1px solid var(--input-border); border-radius: var(--radius-md); font-size: 15px; background: rgba(0,0,0,0.2); color: #fff;
+        }
+
+        .theme-switch-btn {
+            position: absolute; left: 20px; top: 24px;
+            background: none; color: #ffffff; border: none;
+            width: auto; font-size: 24px; cursor: pointer; transition: var(--transition-smooth); box-shadow: none; padding: 0; margin: 0; opacity: 0.8;
+        }
+        .theme-switch-btn:hover { transform: rotate(45deg) scale(1.15); opacity: 1; }
+        
+        .addons-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+            background: rgba(0,0,0,0.15); padding: 16px; border-radius: var(--radius-md);
+            border: 1px dashed var(--input-border); margin-top: 8px;
+        }
+        .addon-item { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 600; cursor: pointer; user-select: none; }
+        .addon-item input { width: 20px !important; height: 20px !important; margin: 0; cursor: pointer; accent-color: var(--accent); }
+
+        /* نظام النوافذ المنبثقة الذكي والحديث */
+        .custom-modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(5, 3, 10, 0.65); backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 10000; opacity: 0; pointer-events: none;
+            transition: var(--transition-smooth); padding: 20px;
+        }
+        .custom-modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .custom-modal-card {
+            background: radial-gradient(circle at top right, #25182e 0%, #0f0b18 100%); 
+            padding: 30px; border-radius: var(--radius-lg);
+            width: 100%; max-width: 420px; text-align: center;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transform: scale(0.8) translateY(30px); transition: var(--transition-smooth);
+        }
+        .custom-modal-overlay.active .custom-modal-card { transform: scale(1) translateY(0); }
+        .custom-modal-card h4 { color: #ffffff; margin-top: 0; margin-bottom: 14px; font-size: 21px; font-weight: 800; }
+        .custom-modal-buttons { display: flex; gap: 14px; margin-top: 28px; }
+
+        /* ملاءمة الشاشات الكبيرة العادية واللاب توب */
+        @media (min-width: 768px) {
+            body { padding: 40px 20px 14px 20px; }
+            .container { padding: 40px; margin-top: 0; }
+            .resort-card { max-width: 400px !important; margin: 15px auto; max-width: 480px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="splash-screen">
+    <div class="splash-logo">
+        <i class="fa-solid fa-hotel"></i>
+    </div>
+    <div class="splash-title">استراحة أبو حاشد</div>
+    <div class="splash-subtitle">نظام حجز المواعيد والبطاقات الفورية العصرية</div>
+    <div class="splash-loader">
+        <div class="splash-loader-bar"></div>
+    </div>
+</div>
+
+<div id="network-alert" class="network-alert">تنبيه: تم انقطاع الاتصال! يرجى التأكد من شبكة الإنترنت لديك.</div>
+
+<div id="custom-alert-modal" class="custom-modal-overlay">
+    <div class="custom-modal-card">
+        <h4 id="modal-alert-title">تنبيه النظام</h4>
+        <p id="modal-alert-text" style="font-size: 15px; line-height: 1.6; margin: 0; opacity: 0.85; color: #fff;"></p>
+        <div class="custom-modal-buttons">
+            <button id="modal-alert-close-btn" style="margin: 0;" onclick="closeCustomAlert()">موافق</button>
+        </div>
+    </div>
+</div>
+
+<div id="custom-confirm-modal" class="custom-modal-overlay">
+    <div class="custom-modal-card">
+        <h4 id="modal-confirm-title">تأكيد الإجراء</h4>
+        <p id="modal-confirm-text" style="font-size: 15px; line-height: 1.6; margin: 0; opacity: 0.85; color: #fff;"></p>
+        <div class="custom-modal-buttons">
+            <button class="btn-success" id="modal-confirm-yes-btn" style="margin: 0; flex: 1;">نعم، متأكد</button>
+            <button class="btn-danger" style="margin: 0; flex: 1; background: #4a4e69; box-shadow: none;" onclick="closeCustomConfirm(false)">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <button class="theme-switch-btn" onclick="toggleTheme()"><i class="fa-solid fa-moon"></i></button>
+    
+    <div id="login-page">
+        <h2>نظام حجز استراحة أبو حاشد</h2>
+        <p style="color: rgba(255,255,255,0.5); font-size: 15px; margin-top: -15px; margin-bottom: 35px;">مرحباً بك، يرجى تسجيل الدخول للمتابعة</p>
+        
+        <div class="form-group">
+            <label>رقم الجوال:</label>
+            <input type="text" id="phone" maxlength="10" placeholder="رقم الجوال (مثال: 0500000000)" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+        </div>
+        <div class="form-group">
+            <label>الرمز السري الخاص بك:</label>
+            <input type="password" id="member-password" maxlength="20" placeholder="أدخل رمزك السري">
+            <i class="fa-solid fa-eye password-toggle" onclick="togglePasswordVisibility('member-password')"></i>
+        </div>
+        
+        <button id="login-btn" onclick="withLoading(this, login)"><i class="fa-solid fa-right-to-bracket"></i> دخول إلى النظام</button>
+        <button class="btn-link" id="register-link-btn" onclick="showRegisterPage()">إنشاء حساب جديد</button>
+        <button class="btn-link" style="color: rgba(255,255,255,0.4); display:block; margin: 25px auto 0 auto;" onclick="showAdminPortal()">بوابة الإدارة المشتركة</button>
+        <p style="color:var(--danger); font-weight:bold; display:none; padding: 14px; background: rgba(255,71,87,0.1); border: 1px solid var(--danger); border-radius: var(--radius-md); margin-top:15px; text-align: right;" id="login-error"></p>
+        
+        <div style="margin-top: 40px; font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.02); padding: 12px; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.04);">
+            إشراف / سليم الفتيحي أبو نواف
+        </div>
+    </div>
+
+    <div id="register-page" class="hidden">
+        <h2>إنشاء حساب جديد بالنظام</h2>
+        <p style="color: rgba(255,255,255,0.5); font-size: 14px;">يرجى تعبئة الحقول لإرسال طلب التفعيل للتمكين</p>
+        <div class="form-group">
+            <label>الاسم الكامل:</label>
+            <input type="text" id="reg-name" maxlength="40" placeholder="الاسم الكامل باللغة العربية">
+        </div>
+        <div class="form-group">
+            <label>رقم الجوال (10 أرقام تبدأ بـ 05):</label>
+            <input type="text" id="reg-phone" maxlength="10" placeholder="مثال: 05XXXXXXXX" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+        </div>
+        <div class="form-group">
+            <label>تحديد الرمز السري:</label>
+            <input type="password" id="reg-password" maxlength="20" placeholder="أدخل كلمة مرور قوية">
+            <i class="fa-solid fa-eye password-toggle" onclick="togglePasswordVisibility('reg-password')"></i>
+        </div>
+        <div class="form-group">
+            <label>تأكيد الرمز السري:</label>
+            <input type="password" id="reg-password-confirm" maxlength="20" placeholder="أعد كتابة الرمز السري">
+            <i class="fa-solid fa-eye password-toggle" onclick="togglePasswordVisibility('reg-password-confirm')"></i>
+        </div>
+        <button class="btn-success" id="reg-btn" onclick="withLoading(this, registerAccount)">إرسال طلب التسجيل</button>
+        <button class="btn-danger" style="background: rgba(255,255,255,0.1); color:#fff; box-shadow: none; margin-top:12px;" onclick="showLoginPage()">رجوع لصفحة الدخول</button>
+    </div>
+
+    <div id="admin-login-box" class="hidden">
+        <h2>بوابة تسجيل دخول المشرفين المزدوجة</h2>
+        <div class="form-group" id="admin-step1">
+            <label style="font-weight:600;">الرمز السري الأول للمشرف:</label>
+            <input type="password" id="admin-pass1" placeholder="أدخل الرمز السري الأول">
+            <button style="width:100%;" onclick="withLoading(this, checkAdminStep1)">التالي</button>
+        </div>
+        <div class="form-group hidden" id="admin-step2">
+            <label style="color: var(--accent); font-weight:600;">أدخل رمز التحقق الثاني هنا:</label>
+            <input type="password" id="admin-pass2" placeholder="أدخل رمز التحقق">
+            <button class="btn-success" style="width:100%;" onclick="withLoading(this, checkAdminStep2)">تأكيد الدخول المباشر</button>
+        </div>
+        <button class="btn-link" onclick="showLoginPage()">العودة لواجهة المستخدم</button>
+    </div>
+
+    <div id="member-page" class="hidden">
+        <h2>أهلاً بك يا <span id="display-member-name" style="color: var(--accent);"></span></h2>
+        <div class="datetime-box">
+            <span>التاريخ: <span id="current-day"></span> - <span id="current-date"></span></span>
+            <span>الساعة: <span id="current-time"></span></span>
+        </div>
+
+        <div id="user-sec-book" class="user-section">
+            <div id="user-announcement-panel" class="announcement-banner hidden"></div>
+
+            <div class="admin-section-box">
+                <h3><i class="fa-solid fa-ticket"></i> حجز تذكرة فوري</h3>
+                
+                <div style="text-align: right; display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px;">
+                        <div class="price-badge" style="margin-bottom: 0; cursor: pointer;" onclick="togglePriceDetails()">
+                            الرسوم الإجمالي: <span id="user-display-amount">0</span> <i class="fa-solid fa-caret-down" style="margin-right: 5px;"></i>
+                        </div>
+                        <div class="counter-badge" id="tickets-remaining-badge" style="margin-bottom: 0;">جاري حساب التوفر...</div>
+                    </div>
+                    <div id="price-details-box" style="display: none; background: rgba(0,0,0,0.3); padding: 14px; border-radius: var(--radius-md); font-size: 14px; text-align: right; border: 1px solid var(--input-border); color:#fff; line-height: 1.6;">
+                        جاري الحساب...
+                    </div>
+                    <div id="discount-applied-badge" style="color: var(--secondary); font-weight: bold; font-size: 14px; width: 100%;"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label>اسم الضيف الكامل (إجباري - ثنائي أو ثلاثي):</label>
+                    <input type="text" id="book-passenger-name" maxlength="40">
+                </div>
+                <div class="form-group">
+                    <label>نوع الحجز ومناسبة الحضور:</label>
+                    <select id="book-type">
+                        <option value="مشاهدة مباراة">⚽ مشاهدة مباراة</option>
+                        <option value="جلسة ووناسة">☕ جلسة ووناسة</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>تاريخ الحجز المطلوب:</label>
+                    <input type="date" id="book-date" onchange="updateRemainingTicketsCount()">
+                </div>
+                
+                <div class="form-group">
+                    <label>حدد وقت الحضور المفضل لديك (متاح أي وقت):</label>
+                    <input type="time" id="book-time-slot" onchange="calculateLivePrice()">
+                </div>
+                
+                <div class="form-group" id="user-addons-container">
+                    <label>طلبات وإضافات خاصة (توصيل شامل للطلب):</label>
+                    <div class="addons-grid">
+                        <label class="addon-item"><input type="checkbox" id="addon-water" value="2" onchange="calculateLivePrice()"> ماء (<span id="lbl-addon-water">2</span> ريال)</label>
+                        <label class="addon-item"><input type="checkbox" id="addon-soda" value="3" onchange="calculateLivePrice()"> مشروب غازي (<span id="lbl-addon-soda">3</span> ريال)</label>
+                        <label class="addon-item" style="grid-column: span 2;"><input type="checkbox" id="addon-tea" value="5" onchange="calculateLivePrice()"> شاهي (<span id="lbl-addon-tea">5</span> ريال)</label>
+                    </div>
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-md); border: 1px dashed var(--input-border);">
+                    <label>هل لديك كود خصم؟</label>
+                    <div style="display: flex; gap: 10px; margin-top: 8px; flex-direction: column;">
+                        <div style="display: flex; gap: 10px; width: 100%;">
+                            <input type="text" id="book-coupon-input" placeholder="أدخل الكود" style="margin: 0; flex: 1;">
+                            <button type="button" onclick="withLoading(this, applyCoupon)" style="margin: 0; width: auto; padding:0 24px; background: var(--accent-gradient); box-shadow: none;">تطبيق</button>
+                        </div>
+                        <div id="coupon-success-msg" style="color: #00b894; font-weight: bold; font-size: 14px; text-align: right; margin-top: 5px; display: none;">تم تطبيق كود الخصم بنجاح!</div>
+                    </div>
+                </div>
+                <button id="submit-booking-btn" class="btn-success" style="margin-top: 25px;" onclick="confirmBookingAlert()"><i class="fa-solid fa-circle-check"></i> تأكيد وإصدار بطاقة الدخول</button>
+            </div>
+        </div>
+
+        <div id="user-sec-mybookings" class="user-section hidden">
+            <h3><i class="fa-solid fa-folder-open"></i> بطاقات الدخول الصادرة الخاصة بي</h3>
+            <div id="my-tickets-container"></div>
+        </div>
+
+        <div id="user-sec-support" class="user-section hidden">
+            <h3><i class="fa-solid fa-headset"></i> مركز رفع الشكاوى وتذاكر الدعم الفني</h3>
+            <div id="user-pinned-msg-area" class="pinned-chat-msg hidden"></div>
+            
+            <div class="chat-area-container">
+                <div class="form-group">
+                    <label>عنوان الشكوى / الموضوع:</label>
+                    <input type="text" id="ticket-subject" placeholder="مثال: مشكلة في تفعيل كود الخصم">
+                </div>
+                <div class="form-group">
+                    <label>نوع القسم أو المشكلة:</label>
+                    <select id="ticket-category">
+                        <option value="المدفوعات والرسوم">💰 المدفوعات والرسوم</option>
+                        <option value="مشكلة تقنية بالنظام">📱 مشكلة تقنية بالنظام</option>
+                        <option value="اقتراحات وشكاوى عامة">📝 اقتراحات وشكاوى عامة</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>تفاصيل الشكوى بالكامل:</label>
+                    <textarea id="ticket-details" placeholder="يرجى كتابة تفاصيل المشكلة هنا بدقة لسرعة المعالجة..." rows="4"></textarea>
+                </div>
+                <button class="btn-success" id="send-ticket-btn" onclick="withLoading(this, createSupportTicket)">إرسال التذكرة للدعم الفني</button>
+            </div>
+
+            <h3 style="margin-top:30px;"><i class="fa-solid fa-list"></i> سجل تذاكري الحالية</h3>
+            <div id="user-tickets-list" class="ticket-list-container"></div>
+        </div>
+
+        <div id="user-sec-settings" class="user-section hidden">
+            <h3><i class="fa-solid fa-user-gear"></i> تغيير الرمز السري للحساب</h3>
+            <div class="admin-section-box">
+                <div class="form-group">
+                    <label>الرمز السري الجديد:</label>
+                    <input type="password" id="new-user-password" maxlength="20" placeholder="أدخل الرمز السري الجديد">
+                    <i class="fa-solid fa-eye password-toggle" onclick="togglePasswordVisibility('new-user-password')"></i>
+                </div>
+                <button class="btn-success" onclick="withLoading(this, changeUserPassword)">تحديث الرمز السري</button>
+            </div>
+        </div>
+
+        <button id="logout-btn" class="btn-danger" onclick="withLoading(this, logout)" style="margin-top: 35px;"><i class="fa-solid fa-power-off"></i> تسجيل خروج</button>
+    </div>
+
+    <div id="admin-page" class="hidden">
+        <h2>لوحة تحكم الإدارة العليا</h2>
+
+        <div id="admin-sec-home" class="admin-section hidden">
+            <h3><i class="fa-solid fa-chart-pie"></i> إحصائيات وإعدادات الرسوم والعروض</h3>
+            <div class="stats-grid">
+                <div class="stat-card stat-blue"><h4>إجمالي تذاكر اليوم</h4><span id="stat-total-tickets">0</span> تذكرة</div>
+                <div class="stat-card stat-green"><h4>الحد المسموح يومياً</h4><span id="stat-max-limit-display">4</span> تذاكر</div>
+            </div>
+            
+            <div class="admin-section-box" style="border-top: 4px solid var(--secondary);">
+                <div class="form-group">
+                    <label style="font-weight: 600;">آلية تفعيل المشتركين الجدد:</label>
+                    <select id="admin-reg-mode-select">
+                        <option value="manual">تفعيل يدوي ومراجعة المشرف (قيد المراجعة)</option>
+                        <option value="auto">تفعيل تلقائي ومباشر فور إنشاء الحساب</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label style="font-weight: 600;">استقبال حسابات جديدة بالنظام:</label>
+                    <select id="admin-reg-status-select">
+                        <option value="open">تمكين استقبال تسجيل الأعضاء الجدد</option>
+                        <option value="closed">تعطيل وإغلاق التسجيل الجديد مؤقتاً</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight: 600;">إغلاق الحجوزات اليومية تلقائياً بعد 11 مساءً:</label>
+                    <select id="admin-lock-time-select">
+                        <option value="yes">نعم، تفعيل القفل بعد الـ 11 مساءً</option>
+                        <option value="no">لا، ترك نظام الحجز مفتوح دائماً</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight: 600;">عرض قائمة الطلبات الإضافية (الشاهي والماء) للأعضاء:</label>
+                    <select id="admin-show-addons-select">
+                        <option value="yes">إظهار الإضافات في شاشة الحجز</option>
+                        <option value="no">إخفاء الإضافات (تعطيل الشاهي والماء)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="admin-section-box" style="border-top: 4px solid var(--accent);">
+                <h4 style="margin-top:0; color:var(--accent); font-size:17px;">إعداد الأسعار والحدود الديناميكية</h4>
+                <div class="form-group"><label>رسوم الدخول الافتراضية للتذكرة (ريال):</label><input type="number" id="ticket-amount-input"></div>
+                <div class="form-group"><label>رسوم طلب الماء (ريال):</label><input type="number" id="adm-price-water" value="2"></div>
+                <div class="form-group"><label>رسوم المشروب الغازي (ريال):</label><input type="number" id="adm-price-soda" value="3"></div>
+                <div class="form-group"><label>رسوم إبريق الشاهي (ريال):</label><input type="number" id="adm-price-tea" value="5"></div>
+                <div class="form-group"><label>رسوم خدمات التوصيل الخاصة (ريال):</label><input type="number" id="adm-price-delivery" value="5"></div>
+                <div class="form-group"><label>الحد الأقصى للتذاكر اليومية بالنظام:</label><input type="number" id="adm-max-tickets-limit" value="4"></div>
+            </div>
+
+            <div class="admin-section-box" style="border-top: 4px solid #f39c12;">
+                <div class="form-group">
+                    <label style="font-weight: 600;">كتابة عرض أو ملاحظة عامة للمشتركين:</label>
+                    <textarea id="admin-announcement-input" placeholder="اكتب الإشعار أو العرض هنا ليظهر فوراً للأعضاء..." rows="2" style="resize: none;"></textarea>
+                </div>
+            </div>
+
+            <button style="width:100%;" onclick="withLoading(this, saveSettings)" class="btn-success">حفظ كافة التعديلات العامة واللوحة</button>
+        </div>
+
+        <div id="admin-sec-bookings" class="admin-section hidden">
+            <h3><i class="fa-solid fa-list-check"></i> إدارة التذاكر وسجل الحجوزات</h3>
+            <div id="admin-reservations-audit-list" style="max-height: 380px; overflow-y: auto; border: 1px solid var(--input-border); padding: 14px; border-radius: var(--radius-md); background: rgba(0,0,0,0.2); margin-bottom: 20px; text-align: right;"></div>
+            <button class="btn-danger" style="width:100%;" onclick="withLoading(this, resetAllRevenueAndTickets)">تصفير وإلغاء كافة الحجوزات الحالية</button>
+        </div>
+
+        <div id="admin-sec-coupons" class="admin-section hidden">
+            <h3><i class="fa-solid fa-tags"></i> أكواد الخصم وإعدادات الأمان للمشرفين</h3>
+            <div class="admin-section-box">
+                <h4 style="margin-top:0; color:#fff; font-size:17px;">إعداد كود الخصم</h4>
+                <div class="form-group"><label>كود الخصم:</label><input type="text" id="admin-coupon-code" placeholder="مثال: RAMADAN"></div>
+                <div class="form-group"><label>نسبة الخصم %:</label><input type="number" id="admin-coupon-value" placeholder="15"></div>
+                <div style="display: flex; gap: 14px; margin-top: 10px; margin-bottom:15px;">
+                    <button onclick="withLoading(this, () => toggleCouponStatus(true))" class="btn-success" style="flex:1; margin:0;">تفعيل الكود</button>
+                    <button onclick="withLoading(this, () => toggleCouponStatus(false))" class="btn-danger" style="flex:1; margin:0;">تعطيل الكود</button>
+                </div>
+                <p id="coupon-status-text" style="font-weight: bold; text-align: right; color:#fff; margin:5px 0 0 0;"></p>
+            </div>
+
+            <div class="admin-section-box" style="border-top:4px solid var(--primary);">
+                <h4 style="margin-top:0; color:#fff; font-size:17px;">تغيير الرموز السرية للإدارة</h4>
+                <div class="form-group">
+                    <label>الرمز السري الأول الجديد للمشرف:</label>
+                    <input type="password" id="new-admin-pass1" placeholder="أدخل الرمز الأول الجديد">
+                </div>
+                <div class="form-group">
+                    <label>رمز التحقق الثاني الجديد للمشرف:</label>
+                    <input type="password" id="new-admin-pass2" placeholder="أدخل الرمز الثاني الجديد">
+                </div>
+                <button class="btn-warning" onclick="withLoading(this, changeAdminCredentials)">تحديث رموز الإدارة السرية</button>
+            </div>
+        </div>
+
+        <div id="admin-sec-users" class="admin-section hidden">
+            <h3><i class="fa-solid fa-users-gear"></i> التحكم بالصلاحيات والأعضاء</h3>
+            <input type="text" id="admin-user-search" class="search-box" placeholder="🔍 ابحث عن عضو بالاسم أو رقم الجوال..." oninput="filterUsersTable()">
+            <div style="overflow-x: auto; width:100%;">
+                <table class="admin-table" id="users-table">
+                    <thead>
+                        <tr>
+                            <th>الاسم</th>
+                            <th>الجوال</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-users-management-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="admin-sec-support" class="admin-section hidden">
+            <h3><i class="fa-solid fa-headset"></i> إدارة تذاكر الشكاوى وحسم الملفات</h3>
+            
+            <div class="admin-section-box" style="padding: 16px; margin-bottom: 15px;">
+                <label style="font-weight: 600;">📌 تثبيت رسالة عامة تظهر بأعلى صفحة دعم الأعضاء:</label>
+                <div style="display:flex; gap: 10px; margin-top:8px;">
+                    <input type="text" id="admin-pinned-msg-input" placeholder="اكتب الشروط العامة هنا..." style="margin:0; flex:1;">
+                    <button class="btn-success" style="margin:0; width:auto; padding:0 20px; font-size:14px;" onclick="withLoading(this, savePinnedChatMessage)">تثبيت</button>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px; text-align: right;">
+                <label style="font-weight: 600;">اختر التذكرة النشطة لمعالجتها:</label>
+                <select id="admin-ticket-selector" style="width: 100%; margin-top: 8px; background: rgba(0,0,0,0.2); color:#fff; border:1px solid var(--input-border); padding:12px; border-radius: var(--radius-md);"></select>
+            </div>
+
+            <div id="admin-ticket-view-card" class="chat-area-container hidden" style="margin-bottom:20px; background: rgba(255,255,255,0.05); color:#fff;">
+                <h4 style="margin:0; color:var(--accent);" id="adm-ticket-title"></h4>
+                <p style="font-size:13px; margin:6px 0; opacity:0.7;" id="adm-ticket-meta"></p>
+                <hr style="border:0; border-top:1px dashed var(--input-border); margin:12px 0;">
+                <p style="font-weight:600; font-size:15px;" id="adm-ticket-desc"></p>
+                <div class="form-group" style="margin-top:15px;">
+                    <label>الرد الرسمي للإدارة:</label>
+                    <input type="text" id="admin-ticket-reply-input" placeholder="اكتب التوجيه أو الحل هنا...">
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap: wrap;">
+                    <button class="btn-success" style="flex:1; min-width: 110px; margin: 0;" onclick="withLoading(this, replyToTicket)">إرسال الرد</button>
+                    <button class="btn-warning" style="flex:1; min-width: 110px; margin: 0; color:#fff;" onclick="withLoading(this, closeTicketStatus)">حسم وإغلاق</button>
+                    <button class="btn-danger" style="flex:1; min-width: 110px; margin: 0;" onclick="withLoading(this, adminDeleteTicket)">حذف التذكرة</button>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn-danger" style="width:100%; margin-top: 25px;" onclick="location.reload()"><i class="fa-solid fa-right-from-bracket"></i> تسجيل خروج آمن من الإدارة</button>
+    </div>
+
+</div>
+
+<div id="app-bottom-nav" class="bottom-nav hidden">
+    <div id="nav-user-group" style="display:none; width:100%; justify-content:space-around;">
+        <div id="nav-item-user-book" class="nav-item active" onclick="switchUserSection('user-sec-book', this)">
+            <i class="fa-solid fa-ticket"></i>حجز تذكرة
+        </div>
+        <div id="nav-item-user-mybookings" class="nav-item" onclick="switchUserSection('user-sec-mybookings', this)">
+            <i class="fa-solid fa-receipt"></i>حجوزاتي
+        </div>
+        <div id="nav-item-user-support" class="nav-item" onclick="switchUserSection('user-sec-support', this)">
+            <i class="fa-solid fa-comment-dots"></i>رفع شكوى
+            <span class="badge-count" id="user-support-unread-badge">0</span>
+        </div>
+        <div id="nav-item-user-settings" class="nav-item" onclick="switchUserSection('user-sec-settings', this)">
+            <i class="fa-solid fa-gears"></i>الإعدادات
+        </div>
+    </div>
+
+    <div id="nav-admin-group" style="display:none; width:100%; justify-content:space-around;">
+        <div class="nav-item active" onclick="switchAdminSection('admin-sec-home', this)">
+            <i class="fa-solid fa-gauge"></i>الرئيسية
+        </div>
+        <div class="nav-item" onclick="switchAdminSection('admin-sec-bookings', this)">
+            <i class="fa-solid fa-scroll"></i>الحجوزات
+        </div>
+        <div class="nav-item" onclick="switchAdminSection('admin-sec-coupons', this)">
+            <i class="fa-solid fa-key"></i>الرموز
+        </div>
+        <div id="nav-item-admin-users" class="nav-item" onclick="switchAdminSection('admin-sec-users', this)">
+            <i class="fa-solid fa-users"></i>الأعضاء
+        </div>
+        <div id="nav-item-admin-support" class="nav-item" onclick="switchAdminSection('admin-sec-support', this)">
+            <i class="fa-solid fa-headset"></i>الشكاوى
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, addDoc, getDocs, query, where, deleteDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDl6ErpaxpjH47gPWfhwCVVK9wFJfpSI",
+      authDomain: "fazaa-platform-38dfb.firebaseapp.com",
+      projectId: "fazaa-platform-38dfb",
+      storageBucket: "fazaa-platform-38dfb.firebasestorage.app",
+      messagingSenderId: "712666379440",
+      appId: "1:712666379440:web:3ac6c8d54fe2908d9ef775"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let currentUserPhone = '';
+    let currentUserName = '';
+    let clockInterval;
+    let baseTicketPrice = 0;
+    let finalCalculatedPrice = 0; 
+    let systemAddonPrices = { water: 2, soda: 3, tea: 5, delivery: 5, maxLimit: 4, lockTime: 'no', showAddons: 'yes' };
+    let lastUserActivity = Date.now();
+    let confirmModalCallback = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            const splash = document.getElementById('splash-screen');
+            splash.classList.add('fade-out');
+        }, 2200); 
+    });
+
+    document.getElementById('book-date').min = new Date().toLocaleDateString('en-CA');
+    document.getElementById('book-date').value = new Date().toLocaleDateString('en-CA');
+
+    const nowTime = new Date();
+    document.getElementById('book-time-slot').value = `${String(nowTime.getHours()).padStart(2, '0')}:${String(nowTime.getMinutes()).padStart(2, '0')}`;
+
+    setInterval(() => {
+        if (currentUserPhone && (Date.now() - lastUserActivity > 48 * 60 * 60 * 1000)) { 
+            showCustomAlert("انتهت الجلسة الحالية", "تم تسجيل خروجك تلقائياً لسلامة البيانات والأمان.");
+            logout();
+        }
+    }, 60000);
+
+    document.addEventListener('click', () => lastUserActivity = Date.now());
+    document.addEventListener('input', () => lastUserActivity = Date.now());
+
+    window.showCustomAlert = function(title, text) {
+        document.getElementById('modal-alert-title').innerText = title;
+        document.getElementById('modal-alert-text').innerText = text;
+        document.getElementById('custom-alert-modal').classList.add('active');
+    }
+    window.closeCustomAlert = function() {
+        document.getElementById('custom-alert-modal').classList.remove('active');
+    }
+    window.showCustomConfirm = function(title, text, callback) {
+        document.getElementById('modal-confirm-title').innerText = title;
+        document.getElementById('modal-confirm-text').innerText = text;
+        confirmModalCallback = callback;
+        document.getElementById('custom-confirm-modal').classList.add('active');
+    }
+    window.closeCustomConfirm = function(isYes) {
+        document.getElementById('custom-confirm-modal').classList.remove('active');
+        if(confirmModalCallback) {
+            confirmModalCallback(isYes);
+            confirmModalCallback = null;
+        }
+    }
+    document.getElementById('modal-confirm-yes-btn').onclick = function() { closeCustomConfirm(true); };
+
+    window.toggleTheme = function() {
+        document.body.classList.toggle('dark-theme');
+        const icon = document.querySelector('.theme-switch-btn i');
+        icon.className = document.body.classList.contains('dark-theme') ? "fa-solid fa-sun" : "fa-solid fa-moon";
+    }
+
+    window.togglePasswordVisibility = function(inputId) {
+        const input = document.getElementById(inputId);
+        const icon = input.nextElementSibling;
+        if(input.type === 'password') {
+            input.type = 'text';
+            icon.classList.replace('fa-eye', 'fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.replace('fa-eye-slash', 'fa-eye');
+        }
+    }
+
+    window.addEventListener('offline', () => { document.getElementById('network-alert').style.display = 'block'; });
+    window.addEventListener('online', () => { document.getElementById('network-alert').style.display = 'none'; });
+
+    window.withLoading = function(btn, callback) {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> جاري التنفيذ...`;
+        btn.disabled = true;
+        setTimeout(async () => {
+            try {
+                await callback();
+            } catch(e) {
+                console.error(e);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }, 800);
+    };
+
+    function applyInternalTheme(isInternal) {
+        if(isInternal) document.body.classList.add('internal-theme');
+        else document.body.classList.remove('internal-theme');
+    }
+
+    window.showRegisterPage = function() {
+        document.getElementById('login-page').classList.add('hidden');
+        document.getElementById('register-page').classList.remove('hidden');
+    }
+    window.showLoginPage = function() {
+        document.getElementById('register-page').classList.add('hidden');
+        document.getElementById('admin-login-box').classList.add('hidden');
+        document.getElementById('login-page').classList.remove('hidden');
+    }
+    window.showAdminPortal = function() {
+        document.getElementById('login-page').classList.add('hidden');
+        document.getElementById('admin-login-box').classList.remove('hidden');
+    }
+
+    window.switchUserSection = function(sectionId, element) {
+        document.querySelectorAll('.user-section').forEach(s => s.classList.add('hidden'));
+        document.getElementById(sectionId).classList.remove('hidden');
+        document.querySelectorAll('#nav-user-group .nav-item').forEach(i => i.classList.remove('active'));
+        if(element) element.classList.add('active');
+    }
+
+    window.switchAdminSection = function(sectionId, element) {
+        document.querySelectorAll('.admin-section').forEach(s => s.classList.add('hidden'));
+        document.getElementById(sectionId).classList.remove('hidden');
+        document.querySelectorAll('#nav-admin-group .nav-item').forEach(i => i.classList.remove('active'));
+        element.classList.add('active');
+    }
+
+    window.togglePriceDetails = function() {
+        const box = document.getElementById('price-details-box');
+        box.style.display = (box.style.display === 'none') ? 'block' : 'none';
+    }
+
+    window.filterUsersTable = function() {
+        let input = document.getElementById('admin-user-search').value.toLowerCase();
+        let rows = document.querySelectorAll('#admin-users-management-tbody tr');
+        rows.forEach(row => {
+            let name = row.cells[0].textContent.toLowerCase();
+            let phone = row.cells[1].textContent.toLowerCase();
+            row.style.display = (name.includes(input) || phone.includes(input)) ? "" : "none";
+        });
+    }
+
+    onSnapshot(doc(db, "system", "settings"), (snap) => {
+        if(snap.exists()) {
+            const data = snap.data();
+            document.getElementById('register-link-btn').style.display = (data.regStatus === 'closed') ? 'none' : 'block';
+            systemAddonPrices.water = parseFloat(data.priceWater || '2');
+            systemAddonPrices.soda = parseFloat(data.priceSoda || '3');
+            systemAddonPrices.tea = parseFloat(data.priceTea || '5');
+            systemAddonPrices.delivery = parseFloat(data.priceDelivery || '5');
+            systemAddonPrices.maxLimit = parseInt(data.maxLimit || '4');
+            systemAddonPrices.lockTime = data.lockTime || 'no';
+            systemAddonPrices.showAddons = data.showAddons || 'yes';
+
+            const addonsContainer = document.getElementById('user-addons-container');
+            if (systemAddonPrices.showAddons === 'no') {
+                addonsContainer.classList.add('hidden');
+                document.getElementById('addon-water').checked = false;
+                document.getElementById('addon-soda').checked = false;
+                document.getElementById('addon-tea').checked = false;
+            } else {
+                addonsContainer.classList.remove('hidden');
+            }
+
+            document.getElementById('lbl-addon-water').innerText = systemAddonPrices.water;
+            document.getElementById('lbl-addon-soda').innerText = systemAddonPrices.soda;
+            document.getElementById('lbl-addon-tea').innerText = systemAddonPrices.tea;
+            calculateLivePrice();
+            updateRemainingTicketsCount();
+        }
+    });
+
+    async function registerAccount() {
+        const name = document.getElementById('reg-name').value.trim();
+        const phone = document.getElementById('reg-phone').value.trim();
+        const password = document.getElementById('reg-password').value.trim();
+        const confirmPass = document.getElementById('reg-password-confirm').value.trim();
+        
+        if (name === '' || password === '' || !/^05\d{8}$/.test(phone)) {
+            showCustomAlert("خطأ في البيانات", "الرجاء تعبئة جميع الحقول وإدخال رقم جوال صحيح."); return;
+        }
+        if (password !== confirmPass) {
+            showCustomAlert("خطأ المطابقة", "الرمز السري غير متطابق!"); return;
+        }
+        
+        try {
+            const settingsSnap = await getDoc(doc(db, "system", "settings"));
+            if(settingsSnap.exists() && settingsSnap.data().regStatus === 'closed') {
+                showCustomAlert("التسجيل مغلق", "عذراً، تم إغلاق استقبال الحسابات الجديدة حالياً."); return;
+            }
+
+            const userRef = doc(db, "users", phone);
+            const userSnap = await getDoc(userRef);
+            if(userSnap.exists()) { showCustomAlert("موجود مسبقاً", "هذا الرقم مسجل مسبقاً بالنظام."); } 
+            else {
+                let initialStatus = (settingsSnap.exists() && settingsSnap.data().regMode === 'auto') ? 'approved' : 'pending';
+                await setDoc(userRef, { phone, name, password, status: initialStatus });
+                showCustomAlert("تم التسجيل", initialStatus === 'approved' ? "تم تفعيل حسابك تلقائياً بنجاح!" : "تم إرسال طلبك للمشرف للمراجعة والتمكين.");
+                showLoginPage();
+            }
+        } catch(e) { showCustomAlert("خطأ", "فشل الاتصال بالشبكة."); }
+    }
+
+    async function login() {
+        const phone = document.getElementById('phone').value.trim();
+        const memberPass = document.getElementById('member-password').value.trim();
+        const errorMsg = document.getElementById('login-error');
+        errorMsg.style.display = 'none';
+
+        if (!/^05\d{8}$/.test(phone)) { showError("رقم جوال غير صحيح."); return; }
+
+        try {
+            const userRef = doc(db, "users", phone);
+            const userSnap = await getDoc(userRef);
+
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+                if (userData.status === 'blocked') { showError("الحساب محظور حالياً بسبب مخالفة السياسات."); return; }
+                if (userData.status === 'pending') { showError("حسابك قيد المراجعة والتمكين."); return; }
+                if (userData.password !== memberPass) { showError("الرمز السري خطأ!"); return; }
+
+                currentUserPhone = phone;
+                currentUserName = userData.name;
+            } else { showError("غير مسجل لدينا بالنظام."); return; }
+
+            applyInternalTheme(true); 
+            document.getElementById('login-page').classList.add('hidden');
+            document.getElementById('member-page').classList.remove('hidden');
+            document.getElementById('display-member-name').innerText = currentUserName;
+            document.getElementById('book-passenger-name').value = currentUserName;
+            
+            document.getElementById('app-bottom-nav').classList.remove('hidden');
+            document.getElementById('nav-user-group').style.display = 'flex';
+            document.getElementById('nav-admin-group').style.display = 'none';
+            
+            startClock();
+            await loadMemberTickets();
+            updateRemainingTicketsCount();
+            listenToUserTickets();
+            listenToLiveAnnouncements(); 
+            listenToPinnedChatMessage();
+            executeAutomaticTicketCleanup();
+        } catch (e) { showError("خطأ بالشبكة."); }
+    }
+
+    function showError(msg) {
+        const errorMsg = document.getElementById('login-error');
+        errorMsg.innerHTML = msg; errorMsg.style.display = 'block';
+    }
+
+    window.changeUserPassword = async function() {
+        const newPass = document.getElementById('new-user-password').value.trim();
+        if(!newPass) { showCustomAlert("خطأ", "أدخل رمزاً صحيحاً."); return; }
+        await updateDoc(doc(db, "users", currentUserPhone), { password: newPass });
+        showCustomAlert("نجاح", "تم تحديث رمزك السري بنجاح!");
+        document.getElementById('new-user-password').value = "";
+    }
+
+    function logout() {
+        clearInterval(clockInterval);
+        currentUserPhone = ''; currentUserName = '';
+        document.getElementById('app-bottom-nav').classList.add('hidden');
+        document.getElementById('member-page').classList.add('hidden');
+        applyInternalTheme(false); showLoginPage();
+    }
+
+    function startClock() {
+        const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        clockInterval = setInterval(() => {
+            const now = new Date();
+            document.getElementById('current-day').innerText = days[now.getDay()];
+            document.getElementById('current-date').innerText = now.toLocaleDateString('en-CA'); 
+            document.getElementById('current-time').innerText = now.toLocaleTimeString('ar-SA');
+        }, 1000);
+    }
+
+    window.calculateLivePrice = function() {
+        let price = baseTicketPrice;
+        let details = `سعر التذكرة الأساسي: ${baseTicketPrice} ريال\n`;
+        let hasAddon = false;
+
+        if (systemAddonPrices.showAddons !== 'no') {
+            if(document.getElementById('addon-water').checked) { price += systemAddonPrices.water; details += `+ ماء: ${systemAddonPrices.water} ريال\n`; hasAddon = true; }
+            if(document.getElementById('addon-soda').checked) { price += systemAddonPrices.soda; details += `+ مشروب غازي: ${systemAddonPrices.soda} ريال\n`; hasAddon = true; }
+            if(document.getElementById('addon-tea').checked) { price += systemAddonPrices.tea; details += `+ شاهي: ${systemAddonPrices.tea} ريال\n`; hasAddon = true; }
+            if(hasAddon) { price += systemAddonPrices.delivery; details += `+ رسوم توصيل خدمات: ${systemAddonPrices.delivery} ريال\n`; } 
+        }
+
+        finalCalculatedPrice = price;
+        document.getElementById('user-display-amount').innerText = finalCalculatedPrice + " ريال";
+        document.getElementById('price-details-box').innerText = details;
+    }
+
+    window.updateRemainingTicketsCount = async function() {
+        const targetDate = document.getElementById('book-date').value;
+        if(!targetDate) return;
+        try {
+            const dayQuery = query(collection(db, "reservations"), where("date", "==", targetDate));
+            const daySnapshot = await getDocs(dayQuery);
+            const remaining = Math.max(0, systemAddonPrices.maxLimit - daySnapshot.size);
+            document.getElementById('tickets-remaining-badge').innerText = `متبقي ${remaining} تذاكر فقط للحجز اليوم!`;
+        } catch(e){}
+    }
+
+    window.confirmBookingAlert = function() {
+        const pName = document.getElementById('book-passenger-name').value.trim();
+        const bookTimeStart = document.getElementById('book-time-slot').value;
+
+        if (pName.split(" ").filter(Boolean).length < 2) {
+            showCustomAlert("اسم غير مكتمل", "يرجى كتابة اسم الضيف ثنائياً أو ثلاثياً على الألقل."); return;
+        }
+        if (!bookTimeStart) {
+            showCustomAlert("وقت ناقص", "يرجى تحديد وقت الحضور المطلوب."); return;
+        }
+
+        if(systemAddonPrices.lockTime === 'yes') {
+            let currentHour = new Date().getHours();
+            if(currentHour >= 23 || currentHour < 5) {
+                showCustomAlert("الحجز مغلق", "عذراً، يغلق نظام استقبال الحجوزات بعد الساعة 11 مساءً."); return;
+            }
+        }
+
+        showCustomConfirm("تأكيد دفع الرسوم", `عليك دفع مبلغ ${finalCalculatedPrice} ريال فور إصدار التذكرة. هل تود الاستمرار؟`, (isYes) => {
+            if(isYes) {
+                const btn = document.getElementById('submit-booking-btn');
+                withLoading(btn, submitBooking);
+            }
+        });
+    }
+
+    async function applyCoupon() {
+        const codeInput = document.getElementById('book-coupon-input').value.trim().toUpperCase();
+        const successMsg = document.getElementById('coupon-success-msg');
+        if(!codeInput) return;
+        try {
+            const couponSnap = await getDoc(doc(db, "system", "coupon"));
+            if(couponSnap.exists() && couponSnap.data().active && couponSnap.data().code === codeInput) {
+                const discount = parseFloat(couponSnap.data().value || '0');
+                baseTicketPrice = baseTicketPrice - (baseTicketPrice * (discount / 100));
+                calculateLivePrice();
+                document.getElementById('discount-applied-badge').innerText = `تم تطبيق خصم %${discount}`;
+                successMsg.style.display = 'block'; // إظهار الجملة المطلوبة تحت كلمة "ادخل الكود"
+                return;
+            }
+            successMsg.style.display = 'none'; // إخفاء الجملة في حال عدم صحة الكود
+            showCustomAlert("كود خاطئ", "كود الخصم المدخل غير صحيح.");
+        } catch(e) {}
+    }
+
+    async function submitBooking() {
+        const passengerName = document.getElementById('book-passenger-name').value.trim();
+        const bookDate = document.getElementById('book-date').value;
+        const bookTimeStart = document.getElementById('book-time-slot').value;
+        const bookType = document.getElementById('book-type').value;
+
+        let hour = parseInt(bookTimeStart.split(":")[0]);
+        let minute = bookTimeStart.split(":")[1];
+        let leaveHour = (hour + 2) % 24;
+        let bookTimeEnd = (leaveHour < 10 ? "0" + leaveHour : leaveHour) + ":" + minute;
+
+        try {
+            const dayQuery = query(collection(db, "reservations"), where("date", "==", bookDate));
+            const daySnapshot = await getDocs(dayQuery);
+            if (daySnapshot.size >= systemAddonPrices.maxLimit) {
+                showCustomAlert("عذراً", `تم الوصول للحد الأقصى المسموح به لهذا اليوم.`); return;
+            }
+
+            let randomTicketCode = Math.floor(100000 + Math.random() * 900000).toString();
+            await addDoc(collection(db, "reservations"), {
+                phone: currentUserPhone, name: passengerName, date: bookDate, 
+                timeStart: bookTimeStart, timeEnd: bookTimeEnd,
+                type: bookType, code: randomTicketCode, price: finalCalculatedPrice.toString(), timestamp: Date.now()
+            });
+            showCustomAlert("نجاح الحجز", "تم إصدار بطاقة الدخول بنجاح!");
+            
+            await loadMemberTickets();
+            updateRemainingTicketsCount();
+            switchUserSection('user-sec-mybookings', document.getElementById('nav-item-user-mybookings'));
+        } catch(e) { showCustomAlert("خطأ", "فشل إصدار الحجز."); }
+    }
+
+    async function loadMemberTickets() {
+        const settingsSnap = await getDoc(doc(db, "system", "settings"));
+        baseTicketPrice = parseFloat(settingsSnap.data().amount || '10');
+        calculateLivePrice();
+
+        const q = query(collection(db, "reservations"), where("phone", "==", currentUserPhone));
+        const querySnapshot = await getDocs(q);
+        let container = document.getElementById('my-tickets-container');
+        container.innerHTML = '';
+
+        let sortedTickets = [];
+        querySnapshot.forEach(doc => { sortedTickets.push({ id: doc.id, ...doc.data() }); });
+        sortedTickets.sort((a, b) => b.timestamp - a.timestamp);
+
+        sortedTickets.forEach(booking => {
+            let fbId = booking.id;
+            let formatTimeStr = `من ${booking.timeStart} حتى ${booking.timeEnd || 'ساعتين'}`;
+            
+            container.innerHTML += `
+            <div class="resort-card" style="margin-bottom:20px;">
+                <div class="print-wrapper-box" id="print-area-${fbId}">
+                    <div class="resort-header">
+                        <div>بطاقة دخول استراحة أبو حاشد</div>
+                        <div class="badge-confirmed">مؤكدة ✓</div>
+                    </div>
+                    <div class="resort-body">
+                        <div class="ticket-field"><p class="ticket-label">اسم الضيف:</p><p class="ticket-value">${booking.name}</p></div>
+                        <div class="ticket-field"><p class="ticket-label">رمز الدخول:</p><p class="ticket-value highlight-cyan">${booking.code}</p></div>
+                        <div class="ticket-field"><p class="ticket-label">تاريخ الحجز:</p><p class="ticket-value">${booking.date}</p></div>
+                        <div class="ticket-field"><p class="ticket-label">الفترة:</p><p class="ticket-value" style="font-size:14px; color:var(--primary);">${formatTimeStr}</p></div>
+                        <div class="location-section"><p class="ticket-label">المناسبة:</p><p class="ticket-value" style="color:var(--accent);">${booking.type || 'جلسة'}</p></div>
+                        
+                        <div class="ticket-status-stamp-box">
+                            <div>
+                                <p class="ticket-label">المبلغ المطلوب والرسوم:</p>
+                                <p class="ticket-value highlight-price" style="margin: 0;">${booking.price} ريال</p>
+                            </div>
+                            <div class="ticket-stamp">توقيع المعتمد ✍</div>
+                        </div>
+                    </div>
+                    <div class="dashed-divider-bottom-container"><div class="side-cutout left"></div><div class="dashed-line"></div><div class="side-cutout right"></div></div>
+                    <div class="resort-footer"><svg id="barcode-${fbId}"></svg></div>
+                </div>
+                <button class="btn-danger" style="border-radius: 0 0 20px 20px; width:100%; margin:0; padding:16px;" onclick="withLoading(this, () => deleteTicketWithPenalty('${fbId}'))">إلغاء الحجز وحذف البطاقة</button>
+            </div>`;
+        });
+
+        sortedTickets.forEach(booking => {
+            if(document.getElementById(`barcode-${booking.id}`)) {
+                JsBarcode(`#barcode-${booking.id}`, booking.code, { format: "CODE128", width: 1.6, height: 40, displayValue: true, fontSize: 11 });
+            }
+        });
+    }
+
+    async function deleteTicketWithPenalty(ticketId) {
+        showCustomConfirm("تأكيد إلغاء التذكرة", "هل أنت متأكد من رغبتك في إلغاء هذا الحجز؟", async (isYes) => {
+            if(!isYes) return;
+            await deleteDoc(doc(db, "reservations", ticketId));
+            showCustomAlert("ناجح", "تم إلغاء الحجز بنجاح.");
+            await loadMemberTickets();
+            updateRemainingTicketsCount();
+        });
+    }
+
+    async function executeAutomaticTicketCleanup() {
+        try {
+            const snap = await getDocs(collection(db, "reservations"));
+            let now = new Date();
+            let currentDateStr = now.toLocaleDateString('en-CA');
+            snap.forEach(async (ticketDoc) => {
+                let ticket = ticketDoc.data();
+                if(ticket.date === currentDateStr && ticket.timeStart) {
+                    let ticketTime = new Date(`${ticket.date}T${ticket.timeStart}`);
+                    if(Date.now() - ticketTime.getTime() > 150 * 60 * 1000) {
+                        await deleteDoc(doc(db, "reservations", ticketDoc.id));
+                    }
+                }
+            });
+        } catch(e){}
+    }
+
+    function listenToLiveAnnouncements() {
+        onSnapshot(doc(db, "system", "settings"), (snap) => {
+            if(snap.exists() && snap.data().announcement) {
+                const panel = document.getElementById('user-announcement-panel');
+                panel.innerText = "📢 ملاحظة العرض الحالية: " + snap.data().announcement;
+                panel.classList.remove('hidden');
+            } else { document.getElementById('user-announcement-panel').classList.add('hidden'); }
+        });
+    }
+
+    function listenToPinnedChatMessage() {
+        onSnapshot(doc(db, "system", "support_settings"), (snap) => {
+            const area = document.getElementById('user-pinned-msg-area');
+            if(snap.exists() && snap.data().pinnedMessage) {
+                area.innerText = "📌 تنبيه الدعم: " + snap.data().pinnedMessage;
+                area.classList.remove('hidden');
+            } else { area.classList.add('hidden'); }
+        });
+    }
+
+    window.savePinnedChatMessage = async function() {
+        const text = document.getElementById('admin-pinned-msg-input').value.trim();
+        await setDoc(doc(db, "system", "support_settings"), { pinnedMessage: text }, { merge: true });
+        showCustomAlert("تم التثبيت", "تم تحديث الرسالة المثبتة بنجاح!");
+    }
+
+    window.createSupportTicket = async function() {
+        const subject = document.getElementById('ticket-subject').value.trim();
+        const category = document.getElementById('ticket-category').value;
+        const details = document.getElementById('ticket-details').value.trim();
+
+        if(!subject || !details) {
+            showCustomAlert("حقول ناقصة", "يرجى كتابة عنوان الشكوى والتفاصيل بالكامل."); return Promise.reject("Missing fields"); 
+        }
+
+        try {
+            let ticketId = "TK-" + Math.floor(100000 + Math.random() * 900000);
+            await setDoc(doc(db, "tickets", ticketId), {
+                ticketId, phone: currentUserPhone, userName: currentUserName,
+                subject, category, details, status: "open", adminReply: "", timestamp: Date.now()
+            });
+
+            showCustomAlert("تم رفع الشكوى", `تم فتح تذكرة شكوى برقم مرجعي: ${ticketId}.`);
+            document.getElementById('ticket-subject').value = "";
+            document.getElementById('ticket-details').value = "";
+            return Promise.resolve();
+        } catch(err) {
+            showCustomAlert("خطأ", "فشل إرسال التذكرة."); return Promise.reject(err);
+        }
+    }
+
+    function listenToUserTickets() {
+        onSnapshot(query(collection(db, "tickets"), where("phone", "==", currentUserPhone)), (snapshot) => {
+            let container = document.getElementById('user-tickets-list');
+            container.innerHTML = "";
+            
+            if(snapshot.size === 0) {
+                container.innerHTML = `<p style="color:rgba(255,255,255,0.4); font-size:14px;">لا توجد لديك شكاوى سابقة حالياً.</p>`; return;
+            }
+
+            snapshot.forEach(doc => {
+                let tk = doc.data();
+                let statusBadge = tk.status === 'open' ? `<span style="color:var(--accent);">● قيد المراجعة</span>` : `<span style="color:var(--secondary);">✓ تم الحل والحسم</span>`;
+                let replyHtml = tk.adminReply ? `<div style="background:rgba(255,255,255,0.04); padding:12px; margin-top:10px; border-radius:8px; font-size:13px; border: 1px solid rgba(255,255,255,0.05);"><strong>الرد الرسمي للإدارة:</strong> ${tk.adminReply}</div>` : '';
+                
+                container.innerHTML += `
+                <div class="support-ticket-item ${tk.status === 'resolved' ? 'resolved' : ''}">
+                    <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; margin-bottom:6px;">
+                        <span>رقم التذكرة: ${tk.ticketId}</span>
+                        <span>${statusBadge}</span>
+                    </div>
+                    <strong style="color:#fff;">الموضوع: ${tk.subject} (${tk.category})</strong>
+                    <p style="margin:6px 0; font-size:13px; opacity:0.8; color:rgba(255,255,255,0.7);">${tk.details}</p>
+                    ${replyHtml}
+                </div>`;
+            });
+        });
+    }
+
+    async function checkAdminStep1() {
+        const p1 = document.getElementById('admin-pass1').value.trim();
+        const authSnap = await getDoc(doc(db, "system", "admin_auth"));
+        const creds = authSnap.exists() ? authSnap.data() : { pass1: "2020", pass2: "1408" };
+        if(p1 === creds.pass1) {
+            document.getElementById('admin-step1').classList.add('hidden');
+            document.getElementById('admin-step2').classList.remove('hidden');
+        } else { showCustomAlert("خطأ", "الرمز السري الأول غير صحيح!"); }
+    }
+
+    async function checkAdminStep2() {
+        const p2 = document.getElementById('admin-pass2').value.trim();
+        const authSnap = await getDoc(doc(db, "system", "admin_auth"));
+        const creds = authSnap.exists() ? authSnap.data() : { pass1: "2020", pass2: "1408" };
+        if(p2 === creds.pass2) {
+            document.getElementById('admin-login-box').classList.add('hidden');
+            document.getElementById('admin-page').classList.remove('hidden');
+            document.getElementById('admin-sec-home').classList.remove('hidden');
+            document.getElementById('app-bottom-nav').classList.remove('hidden');
+            document.getElementById('nav-admin-group').style.display = 'flex';
+            document.getElementById('nav-user-group').style.display = 'none';
+            
+            await loadAdminDashboard();
+            setupAdminTicketSelector();
+        } else { showCustomAlert("خطأ", "رمز التحقق الثاني خطأ!"); }
+    }
+
+    window.changeAdminCredentials = async function() {
+        const p1 = document.getElementById('new-admin-pass1').value.trim();
+        const p2 = document.getElementById('new-admin-pass2').value.trim();
+        if(!p1 || !p2) { showCustomAlert("تنبيه", "يرجى تعبئة كلا الرمزين السريين."); return; }
+        await setDoc(doc(db, "system", "admin_auth"), { pass1: p1, pass2: p2 });
+        showCustomAlert("نجاح الإدارة", "تم تحديث الرموز السرية للإدارة بنجاح!");
+        document.getElementById('new-admin-pass1').value = "";
+        document.getElementById('new-admin-pass2').value = "";
+    }
+
+    async function loadAdminDashboard() {
+        const resSnapshot = await getDocs(query(collection(db, "reservations"), orderBy("timestamp", "desc")));
+        document.getElementById('stat-total-tickets').innerText = resSnapshot.size;
+        
+        const settingsSnap = await getDoc(doc(db, "system", "settings"));
+        const settings = settingsSnap.data() || {};
+        document.getElementById('ticket-amount-input').value = settings.amount || '10';
+        document.getElementById('admin-announcement-input').value = settings.announcement || '';
+        document.getElementById('admin-reg-mode-select').value = settings.regMode || 'manual';
+        document.getElementById('admin-reg-status-select').value = settings.regStatus || 'open';
+        document.getElementById('admin-lock-time-select').value = settings.lockTime || 'no';
+        document.getElementById('admin-show-addons-select').value = settings.showAddons || 'yes';
+        
+        document.getElementById('adm-price-water').value = settings.priceWater || '2';
+        document.getElementById('adm-price-soda').value = settings.priceSoda || '3';
+        document.getElementById('adm-price-tea').value = settings.priceTea || '5';
+        document.getElementById('adm-price-delivery').value = settings.priceDelivery || '5';
+        document.getElementById('adm-max-tickets-limit').value = settings.maxLimit || '4';
+        document.getElementById('stat-max-limit-display').innerText = settings.maxLimit || '4';
+
+        let auditList = document.getElementById('admin-reservations-audit-list');
+        auditList.innerHTML = '';
+        resSnapshot.forEach(doc => {
+            let res = doc.data();
+            auditList.innerHTML += `<div style='display:flex; justify-content:space-between; padding:12px; border-bottom:1px dashed rgba(255,255,255,0.1); align-items:center; font-size:13px;'>
+                <span>${res.name} - (${res.timeStart}-${res.timeEnd}) - ${res.date}</span>
+                <button class="btn-danger btn-small" onclick="withLoading(this, () => adminCancelReservation('${doc.id}'))">إلغاء</button>
+            </div>`;
+        });
+        loadCouponSettings();
+        renderUsersTable();
+    }
+
+    async function renderUsersTable() {
+        const usersSnapshot = await getDocs(collection(db, "users"));
+        let tbody = document.getElementById('admin-users-management-tbody');
+        tbody.innerHTML = '';
+        usersSnapshot.forEach(docSnap => {
+            let user = docSnap.data();
+            let statusText = user.status === 'approved' ? 'نشط' : 'قيد المراجعة';
+            if(user.status === 'blocked') statusText = 'محظور';
+
+            tbody.innerHTML += `<tr>
+                <td>${user.name}</td>
+                <td>${user.phone}</td>
+                <td><strong>${statusText}</strong></td>
+                <td>
+                    <div style="display:flex; gap:2px; justify-content:center;">
+                        <button class="btn-success btn-small" style="padding:6px 10px;" onclick="withLoading(this, () => updateUserStatus('${user.phone}', 'approved'))">تفعيل</button>
+                        <button class="btn-warning btn-small" style="padding:6px 10px;" onclick="adminBlockPrompt('${user.phone}')">حظر</button>
+                        <button class="btn-danger btn-small" style="padding:6px 10px;" onclick="withLoading(this, () => deleteUserAccount('${user.phone}'))"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+    }
+
+    window.adminBlockPrompt = async function(phone) {
+        let reason = prompt("أدخل سبب الحظر:");
+        if(reason === null) return;
+        await updateDoc(doc(db, "users", phone), { status: 'blocked', blockReason: reason });
+        await loadAdminDashboard();
+    }
+
+    async function deleteUserAccount(phone) {
+        if(confirm("حذف الحساب نهائياً؟")) {
+            await deleteDoc(doc(db, "users", phone)); await loadAdminDashboard();
+        }
+    }
+
+    async function updateUserStatus(phone, status) {
+        await updateDoc(doc(db, "users", phone), { status, blockedUntil: null, blockReason: null });
+        await loadAdminDashboard();
+    }
+
+    async function adminCancelReservation(resId) {
+        if (confirm("حذف الحجز الفوري؟")) {
+            await deleteDoc(doc(db, "reservations", resId)); await loadAdminDashboard();
+        }
+    }
+
+    async function toggleCouponStatus(isActive) {
+        await setDoc(doc(db, "system", "coupon"), {
+            code: document.getElementById('admin-coupon-code').value.trim().toUpperCase(),
+            value: document.getElementById('admin-coupon-value').value.trim(), active: isActive
+        });
+        loadCouponSettings();
+    }
+
+    async function loadCouponSettings() {
+        const couponSnap = await getDoc(doc(db, "system", "coupon"));
+        if(couponSnap.exists()) {
+            document.getElementById('coupon-status-text').innerText = couponSnap.data().active ? "الكود الحالي: فعال" : "الكود الحالي: معطل";
+        }
+    }
+
+    async function saveSettings() {
+        await setDoc(doc(db, "system", "settings"), {
+            amount: document.getElementById('ticket-amount-input').value.trim(),
+            announcement: document.getElementById('admin-announcement-input').value.trim(),
+            regMode: document.getElementById('admin-reg-mode-select').value,
+            regStatus: document.getElementById('admin-reg-status-select').value,
+            lockTime: document.getElementById('admin-lock-time-select').value,
+            showAddons: document.getElementById('admin-show-addons-select').value,
+            priceWater: document.getElementById('adm-price-water').value.trim(),
+            priceSoda: document.getElementById('adm-price-soda').value.trim(),
+            priceTea: document.getElementById('adm-price-tea').value.trim(),
+            priceDelivery: document.getElementById('adm-price-delivery').value.trim(),
+            maxLimit: document.getElementById('adm-max-tickets-limit').value.trim()
+        });
+        showCustomAlert("نجاح الحفظ", "تم حفظ وتحديث كافة الإعدادات والحدود بنجاح!");
+        await loadAdminDashboard();
+    }
+
+    async function resetAllRevenueAndTickets() {
+        if(confirm("تصفير كافة الحجوزات القائمة الآن؟")) {
+            const snap = await getDocs(collection(db, "reservations"));
+            for (const d of snap.docs) { await deleteDoc(doc(db, "reservations", d.id)); }
+            await loadAdminDashboard();
+        }
+    }
+
+    function setupAdminTicketSelector() {
+        onSnapshot(collection(db, "tickets"), (snapshot) => {
+            let selector = document.getElementById('admin-ticket-selector');
+            selector.innerHTML = `<option value="">-- اختر تذكرة نشطة لمعالجتها --</option>`;
+            snapshot.forEach(doc => {
+                let tk = doc.data();
+                selector.innerHTML += `<option value="${tk.ticketId}">[${tk.status === 'open' ? 'نشط' : 'مغلق'}] ${tk.ticketId} - ${tk.userName}</option>`;
+            });
+            selector.onchange = window.viewAdminTicketDetails;
+        });
+    }
+
+    window.viewAdminTicketDetails = async function() {
+        let ticketId = document.getElementById('admin-ticket-selector').value;
+        let card = document.getElementById('admin-ticket-view-card');
+        if(!ticketId) { card.classList.add('hidden'); return; }
+
+        let snap = await getDoc(doc(db, "tickets", ticketId));
+        if(snap.exists()) {
+            let tk = snap.data();
+            document.getElementById('adm-ticket-title').innerText = `${tk.ticketId} : ${tk.subject}`;
+            document.getElementById('adm-ticket-meta').innerText = `بواسطة: ${tk.userName} (${tk.phone}) | القسم: ${tk.category}`;
+            document.getElementById('adm-ticket-desc').innerText = `نص الشكوى: ${tk.details}`;
+            document.getElementById('admin-ticket-reply-input').value = tk.adminReply || "";
+            card.classList.remove('hidden');
+        }
+    }
+
+    window.replyToTicket = async function() {
+        let ticketId = document.getElementById('admin-ticket-selector').value;
+        let replyText = document.getElementById('admin-ticket-reply-input').value.trim();
+        if(!ticketId || !replyText) return;
+        await updateDoc(doc(db, "tickets", ticketId), { adminReply: replyText });
+        showCustomAlert("تم الرد", "تم إرسال الرد الرسمي بنجاح.");
+    }
+
+    window.closeTicketStatus = async function() {
+        let ticketId = document.getElementById('admin-ticket-selector').value;
+        if(!ticketId) return;
+        await updateDoc(doc(db, "tickets", ticketId), { status: "resolved" });
+        showCustomAlert("حسم الملف", "تم حسم التذكرة وتعديل حالتها.");
+        document.getElementById('admin-ticket-view-card').classList.add('hidden');
+    }
+
+    window.adminDeleteTicket = async function() {
+        let ticketId = document.getElementById('admin-ticket-selector').value;
+        if(!ticketId) return;
+        showCustomConfirm("تأكيد حذف التذكرة", "هل أنت متأكد من حذف تذكرة الشكوى هذه نهائياً؟", async (isYes) => {
+            if(!isYes) return;
+            await deleteDoc(doc(db, "tickets", ticketId));
+            showCustomAlert("تم الحذف", "تم حذف التذكرة نهائياً.");
+            document.getElementById('admin-ticket-view-card').classList.add('hidden');
+        });
+    }
+
+    window.login = login; window.logout = logout; window.showRegisterPage = showRegisterPage; window.showLoginPage = showLoginPage;
+    window.registerAccount = registerAccount; window.checkAdminStep1 = checkAdminStep1; window.checkAdminStep2 = checkAdminStep2; 
+    window.confirmBookingAlert = confirmBookingAlert; window.deleteTicketWithPenalty = deleteTicketWithPenalty; window.saveSettings = saveSettings; 
+    window.toggleCouponStatus = toggleCouponStatus; window.applyCoupon = applyCoupon; window.updateUserStatus = updateUserStatus; 
+    window.deleteUserAccount = deleteUserAccount; window.adminCancelReservation = adminCancelReservation; window.resetAllRevenueAndTickets = resetAllRevenueAndTickets;
+</script>
+</body>
+</html>
