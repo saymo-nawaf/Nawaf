@@ -307,7 +307,7 @@
         }
 
         /* --- تصميم تذكرة الحجز الفاخرة --- */
-        .resort-card {
+        .resort-card { max-width: 400px !important; margin: 15px auto;
             background: #ffffff; border-radius: var(--radius-lg); overflow: hidden;
             box-shadow: var(--shadow-md); margin-top: 20px; text-align: right;
             position: relative; max-width: 100%; margin-left: auto; margin-right: auto;
@@ -327,14 +327,14 @@
             backdrop-filter: blur(5px);
         }
 
-        .resort-body { padding: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; background: #ffffff; }
+        .resort-body { padding: 14px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; background: #ffffff; }
         .ticket-field { text-align: right; }
-        .ticket-label { color: #8e9bb0; font-size: 12px; font-weight: 700; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px; }
-        .ticket-value { color: #1e272e; font-size: 16px; font-weight: 700; margin: 0; }
-        .ticket-value.highlight-cyan { color: #0984e3; font-size: 18px; font-weight: 800; }
-        .ticket-value.highlight-price { color: #ff6b6b; font-size: 20px; font-weight: 800; }
+        .ticket-label { color: #8e9bb0; font-size: 11px; margin: 0 0 2px 0; font-weight: 700; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+        .ticket-value { color: #1e272e; font-size: 14px; font-weight: 700; margin: 0; }
+        .ticket-value.highlight-cyan { color: #0984e3; font-size: 15px; font-weight: 800; }
+        .ticket-value.highlight-price { color: #ff6b6b; font-size: 16px; font-weight: 800; }
 
-        .location-section { grid-column: span 2; border-top: 1px dashed #dcdde1; padding-top: 14px; }
+        .location-section { grid-column: span 2; border-top: 1px dashed #dcdde1; padding-top: 8px; }
 
         .ticket-status-stamp-box {
             grid-column: span 2; display: flex; justify-content: space-between;
@@ -354,8 +354,8 @@
         .side-cutout.left { left: -9px; }
         .side-cutout.right { right: -9px; }
         
-        .resort-footer { padding: 12px 15px; text-align: center; background: #ffffff; }
-        .resort-footer svg { display: block; margin: 0 auto; max-height: 55px; width: 85%; }
+        .resort-footer { padding: 6px 12px; text-align: center; background: #ffffff; }
+        .resort-footer svg { display: block; margin: 0 auto; max-height: 40px; width: 80%; }
         
         .chat-area-container { display: flex; flex-direction: column; background: var(--chat-bg); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--input-border); padding: 20px; text-align: right; }
         .ticket-list-container { max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
@@ -420,7 +420,7 @@
         @media (min-width: 768px) {
             body { padding: 40px 20px 14px 20px; }
             .container { padding: 40px; margin-top: 0; }
-            .resort-card { max-width: 480px; }
+            .resort-card { max-width: 400px !important; margin: 15px auto; max-width: 480px; }
         }
     </style>
 </head>
@@ -585,9 +585,12 @@
 
                 <div class="form-group" style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-md); border: 1px dashed var(--input-border);">
                     <label>هل لديك كود خصم؟</label>
-                    <div style="display: flex; gap: 10px; margin-top: 8px;">
-                        <input type="text" id="book-coupon-input" placeholder="أدخل الكود" style="margin: 0; flex: 1;">
-                        <button type="button" onclick="withLoading(this, applyCoupon)" style="margin: 0; width: auto; padding:0 24px; background: var(--accent-gradient); box-shadow: none;">تطبيق</button>
+                    <div style="display: flex; gap: 10px; margin-top: 8px; flex-direction: column;">
+                        <div style="display: flex; gap: 10px; width: 100%;">
+                            <input type="text" id="book-coupon-input" placeholder="أدخل الكود" style="margin: 0; flex: 1;">
+                            <button type="button" onclick="withLoading(this, applyCoupon)" style="margin: 0; width: auto; padding:0 24px; background: var(--accent-gradient); box-shadow: none;">تطبيق</button>
+                        </div>
+                        <div id="coupon-success-msg" style="color: #00b894; font-weight: bold; font-size: 14px; text-align: right; margin-top: 5px; display: none;">تم تطبيق كود الخصم بنجاح!</div>
                     </div>
                 </div>
                 <button id="submit-booking-btn" class="btn-success" style="margin-top: 25px;" onclick="confirmBookingAlert()"><i class="fa-solid fa-circle-check"></i> تأكيد وإصدار بطاقة الدخول</button>
@@ -1177,6 +1180,7 @@
 
     async function applyCoupon() {
         const codeInput = document.getElementById('book-coupon-input').value.trim().toUpperCase();
+        const successMsg = document.getElementById('coupon-success-msg');
         if(!codeInput) return;
         try {
             const couponSnap = await getDoc(doc(db, "system", "coupon"));
@@ -1185,8 +1189,10 @@
                 baseTicketPrice = baseTicketPrice - (baseTicketPrice * (discount / 100));
                 calculateLivePrice();
                 document.getElementById('discount-applied-badge').innerText = `تم تطبيق خصم %${discount}`;
+                successMsg.style.display = 'block'; // إظهار الجملة المطلوبة تحت كلمة "ادخل الكود"
                 return;
             }
+            successMsg.style.display = 'none'; // إخفاء الجملة في حال عدم صحة الكود
             showCustomAlert("كود خاطئ", "كود الخصم المدخل غير صحيح.");
         } catch(e) {}
     }
